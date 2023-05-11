@@ -18,6 +18,8 @@ class OrderManager:
         else:
             print(f"{order}\n passed by bot")
 
+    async def order_risk_control(self):
+        pass
 
     def size_order(self, order) -> Order:
         # 选中策略
