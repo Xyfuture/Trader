@@ -1,0 +1,12 @@
+interval: '1h'
+period: 100
+instrument: 'BTC-USDT'
+risk_strategy: 'allin'
+parameter:
+  fast_period: 18
+  slow_period: 21
+  signal_period: 60
+  threshold: 0.0004
+  exit_period: 10
+
+

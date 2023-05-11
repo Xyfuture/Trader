@@ -1,0 +1,7 @@
+# paper trading
+exchange: 'okx'
+api_key: ""
+secret: ""
+password: ""
+sandbox_mode: 'True' # 模拟交易
+
