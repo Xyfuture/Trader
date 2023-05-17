@@ -10,66 +10,54 @@ class OrderManager:
         self.config = config
         self.instrument = config['instrument']
         self.risk_strategy = config['risk_strategy']
+        self.risk_control_interval = config['risk_control_interval']
 
         self.all_orders = []  # managed by place order
         # self.pending_orders = asyncio.Queue()  # wait for trade
         self.under_risk_orders = []  # unsold buy orders
 
-    async def process_order(self, order: Order):
+    def process_order(self, order: Order):
         order = self.fill_order(order)
+        ret = self._place_order(order)
 
+        if order.direction == -1:
+            self.under_risk_orders = []
+        elif order.direction == 1:
+            self.under_risk_orders.append(order)
 
-    async def place_order(self, order: Order) -> bool:
+    def _place_order(self, order: Order) -> bool:
         self.all_orders.append(order)
 
-        order_task = AsyncOrderTask(order)
-        await self.pending_orders.put(order_task)
+        if self.check_order(order):
+            self.broker.place_order(order)
+            print(f'{order}\nhas benn placed to exchange')
+        else:
+            print(f'{order}\nignored by bot')
 
-        ret = await order_task.wait()
-        return ret
-
-    async def _place_order(self, order: Order):
-        # pass
-        while True:
-            order_task: AsyncOrderTask = await self.pending_orders.get()
-
-            order = order_task.order
-            if self.check_order(order):
-                self.broker.place_order(order)
-                print(f'{order}\nhas benn placed to exchange')
-            else:
-                print(f'{order}\nignored by bot')
-
-            order_task.set(True)  # finish
-
-        # order = self.fill_order(order)
-        #
-        # if self.check_order(order):
-        #     self.broker.place_order(order)
-        #     print(f"{order}\nhas been placed to exchange")
-        # else:
-        #     print(f"{order}\npassed by bot")
-        #
-        # return True
+        return True
 
     async def order_risk_control(self):  # take profit, stop loss
         # loop check order risk
         while True:
+            print("Risk Control Working")
             if self.under_risk_orders:
                 last_price = self.broker.fetchTicker(self.instrument)['last']
                 risk_orders = [order for order in self.under_risk_orders if
                                order.stop_loss_price > last_price or order.take_profit_price < last_price]
-
+                print(f"Current Price:{last_price}")
                 for order in risk_orders:
+                    print("Find Risk Orders")
                     source = "take_profit" if order.take_profit_price > last_price else "stop_loss"
                     sell_order = Order(direction=-1, size=order.size, order_source=source)
                     sell_order = self.fill_order(sell_order)
-                    ret = await self.place_order(sell_order)
+                    ret = self._place_order(sell_order)
 
                     if ret:
                         self.under_risk_orders.remove(order)
-
-            await asyncio.sleep(60)
+                print("Risk Orders Processed\n")
+            else:
+                print("No Risk Orders\n")
+            await asyncio.sleep(self.risk_control_interval)
 
     def fill_order(self, order) -> Order:
         def strategy_size_order(order: Order) -> Order:

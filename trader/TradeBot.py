@@ -1,3 +1,4 @@
+import asyncio
 from time import sleep
 
 from trader.Broker import Broker
@@ -36,6 +37,7 @@ class TradeBot:
             'instrument': 'BTC-USDT',
             'parameter': None,
             'risk_strategy': 'allin',
+            'risk_control_interval': 60 # seconds
 
         }
         for k, v in config.items():
@@ -44,12 +46,27 @@ class TradeBot:
         return default_config
 
     def run(self):
-        while True:
-            self._run_once()
-            print(f"Sleep for {self.interval} \n")
-            sleep(self.get_interval_seconds(self.interval))
+        asyncio.run(self._run())
 
-    def get_interval_seconds(self,interval):
+    async def _run(self):
+        tasks = [self.strategy_loop(), self.order_manager.order_risk_control()]
+        await asyncio.gather(*tasks)
+
+    async def strategy_loop(self):
+        while True:
+            self.run_once()
+            await asyncio.sleep(self.get_interval_seconds(self.interval))
+
+    def run_once(self):
+        print("Bot Working ...")
+        history_data = self.data_manager.fetch_history_data()
+        print("Trade Data Fetched!")
+        order = self.strategy.generate_signal(history_data)
+        print(f"Signal Generated> Order Direction:{order.direction}")
+        self.order_manager.process_order(order)
+        print("Bot Sleeping ...\n")
+
+    def get_interval_seconds(self, interval):
         match = re.match(r'^(\d+)([smhd])$', interval)
         if match:
             num = int(match.group(1))
@@ -64,12 +81,3 @@ class TradeBot:
                 return num * 86400
         else:
             raise ValueError('Invalid duration string')
-
-    def _run_once(self):
-        print("Bot Working ...")
-        history_data = self.data_manager.fetch_history_data()
-        print("Trade Data Fetched!")
-        order = self.strategy.generate_signal(history_data)
-        print(f"Signal Generated> Order Direction:{order.direction}")
-        self.order_manager.place_order(order)
-        print("Bot Sleeping ...\n")

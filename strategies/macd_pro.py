@@ -16,6 +16,9 @@ class MACDPro:
         self.signal_period = parameters['signal_period']
         self.threshold = parameters['threshold']
         self.exit_period = parameters['exit_period']
+        self.proportion = parameters['proportion']
+        self.take_profit_level = parameters['take_profit_level']
+        self.stop_loss_level = parameters['stop_loss_level']
 
 
 
@@ -47,9 +50,14 @@ class MACDPro:
             elif AVG[i] <= AVG[i - 1] and log_price[i] < AVG[i] and log_price[i - 1] >= AVG[i - 1]:
                 signal[i] = -1
 
+        take_profit = market_vector[-1] * (1+self.take_profit_level)
+        stop_loss = market_vector[-1] * (1-self.stop_loss_level)
+
         if signal[-1] == 1:
-            return Order(direction=1)
+            return Order(direction=1,proportion=self.proportion,
+                         take_profit_price=take_profit,stop_loss_price=stop_loss)
         elif signal[-1] == -1:
-            return Order(direction=-1)
+            return Order(direction=-1,proportion=self.proportion,
+                         take_profit_price=take_profit,stop_loss_price=stop_loss)
 
         return Order()

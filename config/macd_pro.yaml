@@ -1,4 +1,4 @@
-interval: '1m'
+interval: '5m'
 period: 100
 instrument: 'BTC-USDT'
 risk_strategy: 'allin'
@@ -8,5 +8,8 @@ parameter:
   signal_period: 60
   threshold: 0.0004
   exit_period: 10
+  proportion: 0.25
+  take_profit_level: 0.15
+  stop_loss_level: 0.15
 
 
